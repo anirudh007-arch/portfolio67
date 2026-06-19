@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anirudh — Creative Developer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --void: #0B0C10;
+  --void2: #0F1117;
+  --void3: #141822;
+  --clay-light: #C8D8E8;
+  --clay-mid: #7B9FBF;
+  --clay-ice: #A8C4DC;
+  --clay-warm: #E8D5C0;
+  --teal: #6FECD4;
+  --teal-dim: rgba(111,236,212,0.15);
+  --teal-glow: rgba(111,236,212,0.3);
+  --glass-bg: rgba(168,196,220,0.06);
+  --glass-bg-hover: rgba(168,196,220,0.1);
+  --glass-border: rgba(168,196,220,0.12);
+  --glass-border-active: rgba(111,236,212,0.35);
+  --text-primary: #C8D8E8;
+  --text-secondary: rgba(168,196,220,0.55);
+  --text-dim: rgba(168,196,220,0.3);
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: var(--void);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  cursor: none;
+}
+
+/* ─── CUSTOM CURSOR ─── */
+#cursor {
+  position: fixed; z-index: 9999;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--teal);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  transition: width 0.2s, height 0.2s, background 0.2s, opacity 0.2s;
+  mix-blend-mode: screen;
+}
+#cursor-ring {
+  position: fixed; z-index: 9998;
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 1px solid rgba(111,236,212,0.4);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  transition: transform 0.12s ease, width 0.3s, height 0.3s, border-color 0.3s;
+}
+body.hovering #cursor { width: 16px; height: 16px; background: var(--clay-warm); }
+body.hovering #cursor-ring { width: 56px; height: 56px; border-color: rgba(232,213,192,0.5); }
+
+/* ─── WEBGL CANVAS ─── */
+#bg-canvas {
+  position: fixed; inset: 0; z-index: 0;
+  width: 100%; height: 100%;
+}
+
+/* ─── NAV ─── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 28px 48px;
+  pointer-events: none;
+}
+.nav-logo {
+  font-family: var(--font-display); font-size: 0.9rem; font-weight: 600;
+  letter-spacing: 0.08em; color: var(--text-primary);
+  pointer-events: all; cursor: none;
+}
+.nav-logo span { color: var(--teal); }
+.nav-links {
+  display: flex; gap: 40px; list-style: none;
+  pointer-events: all;
+}
+.nav-links button {
+  font-family: var(--font-mono); font-size: 0.72rem; font-weight: 500;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  background: none; border: none; color: var(--text-secondary);
+  cursor: none; transition: color 0.3s;
+  padding: 4px 0; position: relative;
+}
+.nav-links button::after {
+  content: ''; position: absolute; bottom: 0; left: 0;
+  width: 0; height: 1px; background: var(--teal);
+  transition: width 0.3s ease;
+}
+.nav-links button:hover, .nav-links button.active { color: var(--teal); }
+.nav-links button.active::after, .nav-links button:hover::after { width: 100%; }
+
+.nav-status {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.12em;
+  color: var(--text-dim);
+}
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); animation: blink 2s ease infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ─── MAIN CANVAS LAYER ─── */
+#scene {
+  position: fixed; inset: 0; z-index: 10;
+  perspective: 1200px;
+  perspective-origin: 50% 50%;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+
+#scene-inner {
+  position: relative;
+  width: 100vw; height: 100vh;
+  transform-style: preserve-3d;
+  transition: transform 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ─── VIEWS ─── */
+.view {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.6s ease;
+}
+.view.active { opacity: 1; pointer-events: all; }
+
+/* ─── HERO VIEW ─── */
+#hero-view { flex-direction: column; gap: 0; }
+
+.hero-tag {
+  font-family: var(--font-mono); font-size: 0.7rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--teal); margin-bottom: 20px;
+  display: flex; align-items: center; gap: 12px;
+}
+.hero-tag::before { content:''; display:block; width:28px; height:1px; background: var(--teal); }
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(3.5rem, 8vw, 7.5rem);
+  font-weight: 700; line-height: 0.95;
+  letter-spacing: -0.03em;
+  color: var(--clay-light);
+  text-align: center;
+  margin-bottom: 28px;
+}
+.hero-title .line2 { color: transparent; -webkit-text-stroke: 1px rgba(168,196,220,0.35); display: block; }
+.hero-title .accent { color: var(--teal); }
+
+.hero-sub {
+  font-size: clamp(0.85rem, 1.4vw, 1rem);
+  color: var(--text-secondary); text-align: center;
+  max-width: 440px; line-height: 1.8; margin-bottom: 56px;
+  font-weight: 300;
+}
+
+.hero-ctas { display: flex; gap: 16px; }
+
+.btn-primary {
+  font-family: var(--font-mono); font-size: 0.72rem;
+  font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 14px 28px;
+  background: var(--teal); color: var(--void);
+  border: none; border-radius: 6px; cursor: none;
+  transition: box-shadow 0.3s, transform 0.2s, background 0.3s;
+  position: relative; overflow: hidden;
+}
+.btn-primary::before {
+  content: ''; position: absolute; inset: 0;
+  background: rgba(255,255,255,0.15);
+  transform: translateX(-110%) skewX(-15deg);
+  transition: transform 0.5s ease;
+}
+.btn-primary:hover::before { transform: translateX(110%) skewX(-15deg); }
+.btn-primary:hover { box-shadow: 0 0 32px var(--teal-glow), 0 8px 24px rgba(0,0,0,0.4); transform: translateY(-2px); }
+
+.btn-ghost {
+  font-family: var(--font-mono); font-size: 0.72rem;
+  font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 13px 28px;
+  background: transparent; color: var(--clay-mid);
+  border: 1px solid var(--glass-border); border-radius: 6px; cursor: none;
+  transition: border-color 0.3s, color 0.3s, transform 0.2s;
+}
+.btn-ghost:hover { border-color: var(--clay-mid); color: var(--clay-light); transform: translateY(-2px); }
+
+/* Floating orbs in hero (CSS, not canvas) */
+.hero-orbs {
+  position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+}
+.orb {
+  position: absolute; border-radius: 50%;
+  filter: blur(60px); opacity: 0.18;
+  animation: float-orb var(--dur, 12s) ease-in-out infinite alternate;
+}
+.orb-1 { width:340px;height:340px; background:var(--teal); top:10%;left:-5%; --dur:14s; }
+.orb-2 { width:260px;height:260px; background:#7B9FBF; top:50%;right:-8%; --dur:18s; }
+.orb-3 { width:200px;height:200px; background:var(--clay-warm); bottom:5%;left:30%; --dur:11s; }
+@keyframes float-orb {
+  from { transform: translate(0,0) scale(1); }
+  to { transform: translate(30px,40px) scale(1.1); }
+}
+
+/* ─── PROJECT GRID VIEW ─── */
+#projects-view {
+  align-items: flex-start;
+  padding: 100px 48px 40px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--glass-border) transparent;
+}
+
+.projects-header {
+  width: 100%; margin-bottom: 56px;
+  display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 20px;
+}
+.projects-header h2 {
+  font-family: var(--font-display); font-size: clamp(2rem, 4vw, 3.2rem);
+  font-weight: 700; letter-spacing: -0.02em; color: var(--clay-light);
+}
+.projects-header h2 span { color: var(--teal); }
+.project-count {
+  font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.16em;
+  color: var(--text-dim); text-transform: uppercase;
+}
+
+.cards-stage {
+  width: 100%; display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px; perspective: 1400px;
+}
+
+/* ─── 3D GLASS CARD ─── */
+.glass-card {
+  position: relative;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  overflow: hidden;
+  cursor: none;
+  transform-style: preserve-3d;
+  transition: border-color 0.4s, box-shadow 0.4s;
+  transform: perspective(800px) rotateX(0deg) rotateY(0deg);
+  will-change: transform;
+}
+.glass-card:hover {
+  border-color: var(--glass-border-active);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(111,236,212,0.1), inset 0 1px 0 rgba(168,196,220,0.15);
+}
+
+/* Glass sheen */
+.glass-card::before {
+  content: ''; position: absolute; inset: 0; z-index: 2;
+  background: linear-gradient(135deg, rgba(168,196,220,0.08) 0%, transparent 50%, rgba(111,236,212,0.03) 100%);
+  pointer-events: none; border-radius: inherit;
+}
+/* Glass edge highlight */
+.glass-card::after {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; z-index: 3;
+  background: linear-gradient(90deg, transparent, rgba(168,196,220,0.4), transparent);
+  opacity: 0; transition: opacity 0.4s; border-radius: inherit;
+}
+.glass-card:hover::after { opacity: 1; }
+
+.card-art {
+  width: 100%; aspect-ratio: 16/10;
+  position: relative; overflow: hidden;
+  background: var(--void3);
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* Each card gets a unique generative art preview */
+.card-art svg { width: 100%; height: 100%; position: absolute; inset: 0; }
+
+.card-art-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom, transparent 40%, rgba(11,12,16,0.85) 100%);
+  z-index: 1;
+}
+
+.card-body { padding: 24px 26px 26px; position: relative; z-index: 2; }
+
+.card-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.tag {
+  font-family: var(--font-mono); font-size: 0.6rem; font-weight: 500;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 100px;
+  background: rgba(168,196,220,0.08);
+  border: 1px solid rgba(168,196,220,0.15);
+  color: var(--text-secondary);
+  transition: background 0.3s, border-color 0.3s, color 0.3s;
+}
+.glass-card:hover .tag { background: var(--teal-dim); border-color: rgba(111,236,212,0.25); color: var(--teal); }
+
+.card-title {
+  font-family: var(--font-display); font-size: 1.15rem; font-weight: 600;
+  color: var(--clay-light); margin-bottom: 8px; letter-spacing: -0.01em;
+}
+.card-desc { font-size: 0.82rem; color: var(--text-secondary); line-height: 1.7; margin-bottom: 22px; }
+
+.card-footer {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.card-year { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim); letter-spacing: 0.1em; }
+
+.card-link {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--teal);
+  background: none; border: none; cursor: none;
+  padding: 0;
+  transition: gap 0.3s;
+}
+.card-link:hover { gap: 10px; }
+.card-link svg { width: 12px; height: 12px; transition: transform 0.3s; }
+.card-link:hover svg { transform: translate(3px, -3px); }
+
+/* Card glow spot that follows mouse */
+.card-glow {
+  position: absolute; z-index: 1;
+  width: 200px; height: 200px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(111,236,212,0.12) 0%, transparent 70%);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  opacity: 0; transition: opacity 0.3s;
+}
+.glass-card:hover .card-glow { opacity: 1; }
+
+/* ─── ABOUT VIEW ─── */
+#about-view {
+  padding: 100px 48px;
+  align-items: flex-start;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--glass-border) transparent;
+}
+
+.about-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 100px; align-items: center; width: 100%; max-width: 1100px; margin: 0 auto; }
+
+.about-left {}
+.about-eyebrow { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--teal); margin-bottom: 20px; display: flex; align-items: center; gap: 12px; }
+.about-eyebrow::before { content:''; width:28px; height:1px; background: var(--teal); }
+
+.about-name {
+  font-family: var(--font-display); font-size: clamp(2.5rem, 4.5vw, 4rem);
+  font-weight: 700; letter-spacing: -0.02em; color: var(--clay-light);
+  line-height: 1; margin-bottom: 32px;
+}
+.about-name span { display: block; color: transparent; -webkit-text-stroke: 1px rgba(168,196,220,0.3); }
+
+.about-bio { font-size: 0.95rem; color: var(--text-secondary); line-height: 1.9; margin-bottom: 32px; font-weight: 300; }
+
+.skills-list { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 40px; }
+.skill-pill {
+  font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.1em;
+  padding: 8px 16px; border-radius: 100px;
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  transition: all 0.3s;
+}
+.skill-pill:hover { background: var(--teal-dim); border-color: rgba(111,236,212,0.3); color: var(--teal); }
+
+.about-right { position: relative; }
+
+.about-avatar {
+  width: 100%; aspect-ratio: 3/4;
+  background: var(--void3);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.avatar-grid {
+  position: absolute; inset: 0; opacity: 0.35;
+  background-image: linear-gradient(var(--glass-border) 1px, transparent 1px),
+                    linear-gradient(90deg, var(--glass-border) 1px, transparent 1px);
+  background-size: 40px 40px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), filter 0.6s ease;
+  filter: grayscale(30%) contrast(110%) brightness(90%);
+}
+.about-avatar:hover .avatar-img {
+  transform: scale(1.04);
+  filter: grayscale(0%) contrast(100%) brightness(100%);
+}
+
+.about-stats {
+  position: absolute; bottom: -24px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 2px;
+  background: rgba(11,12,16,0.9); backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border); border-radius: 16px;
+  padding: 20px 32px; width: calc(100% - 40px);
+}
+.stat { flex: 1; text-align: center; }
+.stat-num { font-family: var(--font-display); font-size: 1.8rem; font-weight: 700; color: var(--clay-light); line-height: 1; }
+.stat-num span { color: var(--teal); }
+.stat-label { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); margin-top: 4px; }
+.stat-divider { width: 1px; background: var(--glass-border); margin: 0 16px; }
+
+/* ─── CONTACT VIEW ─── */
+#contact-view {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 48px;
+}
+
+.contact-label { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--teal); margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+.contact-label::before { content:''; width:28px; height:1px; background: var(--teal); }
+.contact-label::after { content:''; width:28px; height:1px; background: var(--teal); }
+
+.contact-title {
+  font-family: var(--font-display); font-size: clamp(2.5rem, 5.5vw, 5rem);
+  font-weight: 700; letter-spacing: -0.03em;
+  text-align: center; color: var(--clay-light); line-height: 1;
+  margin-bottom: 24px;
+}
+.contact-sub { font-size: 1rem; color: var(--text-secondary); text-align: center; max-width: 480px; line-height: 1.8; margin-bottom: 60px; font-weight: 300; }
+
+.contact-links { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; margin-bottom: 80px; }
+
+.contact-pill {
+  display: flex; align-items: center; gap: 12px;
+  font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 14px 24px; border-radius: 100px;
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  color: var(--text-secondary); cursor: none;
+  transition: all 0.3s;
+}
+.contact-pill svg { width: 16px; height: 16px; }
+.contact-pill:hover { background: var(--glass-bg-hover); border-color: rgba(111,236,212,0.3); color: var(--teal); box-shadow: 0 8px 32px rgba(0,0,0,0.3); transform: translateY(-3px); }
+
+.contact-email {
+  font-family: var(--font-display); font-size: clamp(1.4rem, 3vw, 2.4rem);
+  font-weight: 600; letter-spacing: -0.01em;
+  color: transparent; -webkit-text-stroke: 1px rgba(168,196,220,0.4);
+  text-align: center; transition: color 0.4s, -webkit-text-stroke 0.4s; cursor: none;
+}
+.contact-email:hover { color: var(--teal); -webkit-text-stroke: 1px transparent; }
+
+/* ─── SCROLL INDICATOR ─── */
+.scroll-hint {
+  position: fixed; bottom: 36px; left: 50%; transform: translateX(-50%);
+  z-index: 100; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  opacity: 0.4; pointer-events: none;
+  transition: opacity 0.5s;
+}
+.scroll-hint.hide { opacity: 0; }
+.scroll-hint span { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-dim); }
+.scroll-line { width: 1px; height: 40px; background: linear-gradient(to bottom, var(--text-dim), transparent); animation: scroll-drop 1.8s ease-in-out infinite; }
+@keyframes scroll-drop { 0%,100%{transform:scaleY(0);transform-origin:top} 50%{transform:scaleY(1);transform-origin:top} 51%{transform:scaleY(1);transform-origin:bottom} 100%{transform:scaleY(0);transform-origin:bottom} }
+
+/* ─── PAGE TRANSITION OVERLAY ─── */
+#transition-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: var(--void);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+#transition-overlay.active { opacity: 1; pointer-events: all; }
+
+/* ─── CORNER UI ─── */
+.corner-ui {
+  position: fixed; bottom: 36px; right: 48px; z-index: 100;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+}
+.corner-coord {
+  font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.1em;
+  color: var(--text-dim); opacity: 0.5; text-align: right;
+}
+
+/* ─── PROGRESS DOTS ─── */
+.nav-dots {
+  position: fixed; right: 48px; top: 50%; transform: translateY(-50%);
+  z-index: 100; display: flex; flex-direction: column; gap: 14px;
+}
+.nav-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--glass-border); cursor: none;
+  transition: background 0.3s, transform 0.3s, height 0.3s;
+  border: none; padding: 0;
+}
+.nav-dot:hover { background: var(--clay-mid); transform: scale(1.4); }
+.nav-dot.active { background: var(--teal); height: 20px; border-radius: 3px; }
+
+/* ─── MOBILE ─── */
+@media (max-width: 768px) {
+  nav { padding: 20px 24px; }
+  .nav-links { display: none; }
+  #projects-view { padding: 80px 20px 40px; }
+  .cards-stage { grid-template-columns: 1fr; max-width: 440px; margin: 0 auto; }
+  .about-layout { grid-template-columns: 1fr; gap: 48px; }
+  .about-stats { position: static; transform: none; width: 100%; margin-top: 24px; }
+  #about-view, #contact-view { padding: 80px 24px; }
+  .hero-title { font-size: clamp(2.8rem, 14vw, 5rem); }
+  .nav-dots { display: none; }
+  .corner-ui { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orb, .scroll-line { animation: none; }
+  * { transition-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- Custom cursor -->
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<!-- Page transition overlay -->
+<div id="transition-overlay"></div>
+
+<!-- WebGL-inspired canvas background -->
+<canvas id="bg-canvas"></canvas>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Anirudh<span>.</span>Prasad</div>
+  <ul class="nav-links">
+    <li><button onclick="navigate('hero')" class="active" id="nav-hero">Home</button></li>
+    <li><button onclick="navigate('projects')" id="nav-projects">Projects</button></li>
+    <li><button onclick="navigate('about')" id="nav-about">About</button></li>
+    <li><button onclick="navigate('contact')" id="nav-contact">Contact</button></li>
+  </ul>
+  <div class="nav-status">
+    <div class="status-dot"></div>
+    <span>Available for work</span>
+  </div>
+</nav>
+
+<!-- Nav dots -->
+<div class="nav-dots">
+  <button class="nav-dot active" onclick="navigate('hero')" title="Home"></button>
+  <button class="nav-dot" onclick="navigate('projects')" title="Projects"></button>
+  <button class="nav-dot" onclick="navigate('about')" title="About"></button>
+  <button class="nav-dot" onclick="navigate('contact')" title="Contact"></button>
+</div>
+
+<!-- Corner coordinates -->
+<div class="corner-ui">
+  <div class="corner-coord" id="coord-xy">000 / 000</div>
+  <div class="corner-coord">v2025.1</div>
+</div>
+
+<!-- Scroll hint -->
+<div class="scroll-hint" id="scrollHint">
+  <div class="scroll-line"></div>
+  <span>Explore</span>
+</div>
+
+<!-- SCENE -->
+<div id="scene">
+  <div id="scene-inner">
+
+    <!-- ─── HERO ─── -->
+    <div class="view active" id="hero-view">
+      <div class="hero-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+      </div>
+      <div class="hero-tag">Creative Developer + 3D Designer</div>
+      <h1 class="hero-title">
+        Building
+        <span class="line2">Worlds</span>
+        <span class="accent">.</span>
+      </h1>
+      <p class="hero-sub">I craft immersive digital experiences at the intersection of engineering and aesthetics — where code becomes texture and interaction becomes feel.</p>
+      <div class="hero-ctas">
+        <button class="btn-primary" onclick="navigate('projects')">View My Work</button>
+        <button class="btn-ghost" onclick="navigate('contact')">Let's Talk</button>
+      </div>
+    </div>
+
+    <!-- ─── PROJECTS ─── -->
+    <div class="view" id="projects-view">
+      <div class="projects-header">
+        <h2>Selected <span>Work</span></h2>
+        <div class="project-count">06 Projects · 2022–2025</div>
+      </div>
+
+      <div class="cards-stage" id="cardsStage">
+
+        <!-- Card 1 -->
+        <div class="glass-card" data-depth="1.2" onmousemove="tiltCard(event, this)" onmouseleave="resetCard(this)" onclick="openProject(this)">
+          <div class="card-glow" id="glow1"></div>
+          <div class="card-art">
+            <svg viewBox="0 0 400 250" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+              <defs>
+                <radialGradient id="rg1" cx="30%" cy="40%" r="60%">
+                  <stop offset="0%" stop-color="#6FECD4" stop-opacity="0.4"/>
+                  <stop offset="100%" stop-color="#0B0C10" stop-opacity="0"/>
+                </radialGradient>
+              </defs>
+              <rect width="400" height="250" fill="#141822"/>
+              <rect width="400" height="250" fill="url(#rg1)"/>
+              <!-- Grid lines -->
+              <g stroke="rgba(111,236,212,0.12)" stroke-width="0.5">
+                <line x1="0" y1="50" x2="400" y2="50"/><line x1="0" y1="100" x2="400" y2="100"/>
+                <line x1="0" y1="150" x2="400" y2="150"/><line x1="0" y1="200" x2="400" y2="200"/>
+                <line x1="80" y1="0" x2="80" y2="250"/><line x1="160" y1="0" x2="160" y2="250"/>
+                <line x1="240" y1="0" x2="240" y2="250"/><line x1="320" y1="0" x2="320" y2="250"/>
+              </g>
+              <!-- Data viz bars -->
+              <rect x="40" y="160" width="30" height="80" rx="3" fill="rgba(111,236,212,0.5)"/>
+              <rect x="90" y="120" width="30" height="120" rx="3" fill="rgba(111,236,212,0.35)"/>
+              <rect x="140" y="90" width="30" height="150" rx="3" fill="rgba(111,236,212,0.6)"/>
+              <rect x="190" y="130" width="30" height="110" rx="3" fill="rgba(111,236,212,0.3)"/>
+              <rect x="240" y="70" width="30" height="170" rx="3" fill="rgba(111,236,212,0.7)"/>
+              <rect x="290" y="110" width="30" height="130" rx="3" fill="rgba(111,236,212,0.45)"/>
+              <!-- Line chart overlay -->
+              <polyline points="55,165 105,125 155,95 205,135 255,75 305,115" fill="none" stroke="#6FECD4" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.7"/>
+              <!-- Dots -->
+              <circle cx="55" cy="165" r="3" fill="#6FECD4" opacity="0.9"/>
+              <circle cx="155" cy="95" r="4" fill="#6FECD4"/>
+              <circle cx="255" cy="75" r="5" fill="#6FECD4"/>
+            </svg>
+            <div class="card-art-overlay"></div>
+          </div>
+          <div class="card-body">
+            <div class="card-tags">
+              <span class="tag">React</span>
+              <span class="tag">WebGL</span>
+              <span class="tag">D3.js</span>
+            </div>
+            <h3 class="card-title">Strata Analytics</h3>
+            <p class="card-desc">A real-time data visualization platform processing 40M+ events/day, rendered through a custom WebGL pipeline with sub-10ms refresh.</p>
+            <div class="card-footer">
+              <span class="card-year">2024</span>
+              <button class="card-link">
+                View case
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M7 17L17 7M17 7H7M17 7v10"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="glass-card" data-depth="0.8" onmousemove="tiltCard(event, this)" onmouseleave="resetCard(this)" onclick="openProject(this)">
+          <div class="card-glow"></div>
+          <div class="card-art">
+            <svg viewBox="0 0 400 250" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+              <defs>
+                <radialGradient id="rg2" cx="70%" cy="60%" r="55%">
+                  <stop offset="0%" stop-color="#A8C4DC" stop-opacity="0.35"/>
+                  <stop offset="100%" stop-color="#0B0C10" stop-opacity="0"/>
+                </radialGradient>
+              </defs>
+              <rect width="400" height="250" fill="#141822"/>
+              <rect width="400" height="250" fill="url(#rg2)"/>
+              <!-- 3D cube wireframe -->
+              <g stroke="rgba(168,196,220,0.5)" stroke-width="1" fill="none">
+                <polygon points="200,40 310,110 310,190 200,260" fill="rgba(168,196,220,0.04)"/>
+                <polygon points="200,40 90,110 90,190 200,260" fill="rgba(168,196,220,0.07)"/>
+                <polygon points="200,40 310,110 200,100 90,110" fill="rgba(168,196,220,0.10)"/>
+                <line x1="200" y1="40" x2="310" y2="110"/>
+                <line x1="200" y1="40" x2="90" y2="110"/>
+                <line x1="310" y1="110" x2="310" y2="190"/>
+                <line x1="90" y1="110" x2="90" y2="190"/>
+                <line x1="310" y1="190" x2="200" y2="260"/>
+                <line x1="90" y1="190" x2="200" y2="260"/>
+                <line x1="90" y1="110" x2="310" y2="110"/>
+                <line x1="200" y1="100" x2="200" y2="260" stroke-dasharray="4 4"/>
+              </g>
+              <!-- Floating orbs -->
+              <circle cx="150" cy="80" r="20" fill="none" stroke="rgba(168,196,220,0.3)" stroke-width="0.8"/>
+              <circle cx="150" cy="80" r="8" fill="rgba(168,196,220,0.2)"/>
+              <circle cx="300" cy="180" r="14" fill="none" stroke="rgba(111,236,212,0.3)" stroke-width="0.8"/>
+              <circle cx="300" cy="180" r="5" fill="rgba(111,236,212,0.25)"/>
+            </svg>
+            <div class="card-art-overlay"></div>
+          </div>
+          <div class="card-body">
+            <div class="card-tags">
+              <span class="tag">Three.js</span>
+              <span class="tag">GSAP</span>
+              <span class="tag">TypeScript</span>
+            </div>
+            <h3 class="card-title">Cricology</h3>
+            <p class="card-desc">Browser-native 3D scene editor with physics simulation, custom shader authoring, and one-click GLTF export. Built for motion designers.</p>
+            <div class="card-footer">
+              <span class="card-year">2024</span>
+              <button class="card-link">
+                View case
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M7 17L17 7M17 7H7M17 7v10"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="glass-card" data-depth="1.5" onmousemove="tiltCard(event, this)" onmouseleave="resetCard(this)" onclick="openProject(this)">
+          <div class="card-glow"></div>
+          <div class="card-art">
+            <svg viewBox="0 0 400 250" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+              <defs>
+                <radialGradient id="rg3" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#E8D5C0" stop-opacity="0.3"/>
+                  <stop offset="100%" stop-color="#0B0C10" stop-opacity="0"/>
+                </radialGradient>
+              </defs>
+              <rect width="400" height="250" fill="#141822"/>
+              <rect width="400" height="250" fill="url(#rg3)"/>
+              <!-- UI mockup -->
+              <rect x="50" y="40" width="300" height="170" rx="12" fill="rgba(255,255,255,0.04)" stroke="rgba(232,213,192,0.2)" stroke-width="1"/>
+              <rect x="66" y="56" width="270" height="28" rx="6" fill="rgba(232,213,192,0.08)"/>
+              <circle cx="82" cy="70" r="5" fill="rgba(232,213,192,0.4)"/>
+              <circle cx="100" cy="70" r="5" fill="rgba(232,213,192,0.25)"/>
+              <circle cx="118" cy="70" r="5" fill="rgba(232,213,192,0.15)"/>
+              <rect x="66" y="94" width="120" height="10" rx="3" fill="rgba(232,213,192,0.15)"/>
+              <rect x="66" y="112" width="180" height="8" rx="3" fill="rgba(232,213,192,0.1)"/>
+              <rect x="66" y="126" width="150" height="8" rx="3" fill="rgba(232,213,192,0.08)"/>
+              <rect x="66" y="152" width="80" height="32" rx="8" fill="rgba(111,236,212,0.25)" stroke="rgba(111,236,212,0.4)" stroke-width="1"/>
+              <rect x="210" y="94" width="120" height="88" rx="8" fill="rgba(255,255,255,0.03)" stroke="rgba(232,213,192,0.15)" stroke-width="1"/>
+              <circle cx="270" cy="130" r="22" fill="rgba(232,213,192,0.1)" stroke="rgba(232,213,192,0.25)" stroke-width="1"/>
+              <circle cx="270" cy="130" r="10" fill="rgba(232,213,192,0.2)"/>
+            </svg>
+            <div class="card-art-overlay"></div>
+          </div>
+          <div class="card-body">
+            <div class="card-tags">
+              <span class="tag">HTML</span>
+              <span class="tag">Canva</span>
+              <span class="tag">React</span>
+            </div>
+            <h3 class="card-title">Sacred Geometry Studios</h3>
+            <p class="card-desc">Built a responsive business website for Mandala to showcase products and services with a modern design, smooth navigation, and an enhanced user experience. Demonstrates frontend development and UI/UX design skills..</p>
+            <div class="card-footer">
+              <span class="card-year">2026</span>
+              <button class="card-link">
+                View case
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M7 17L17 7M17 7H7M17 7v10"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="glass-card" data-depth="1.0" onmousemove="tiltCard(event, this)" onmouseleave="resetCard(this)" onclick="openProject(this)">
+          <div class="card-glow"></div>
+          <div class="card-art">
+            <svg viewBox="0 0 400 250" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+              <defs>
+                <radialGradient id="rg4" cx="60%" cy="30%" r="60%">
+                  <stop offset="0%" stop-color="#7B9FBF" stop-opacity="0.45"/>
+                  <stop offset="100%" stop-color="#0B0C10" stop-opacity="0"/>
+                </radialGradient>
+              </defs>
+              <rect width="400" height="250" fill="#141822"/>
+              <rect width="400" height="250" fill="url(#rg4)"/>
+              <!-- Waveform -->
+              <path d="M20,125 Q60,80 100,125 Q140,170 180,125 Q220,80 260,125 Q300,170 340,125 Q370,95 400,125" fill="none" stroke="rgba(123,159,191,0.6)" stroke-width="2"/>
+              <path d="M20,125 Q50,60 100,125 Q150,190 200,125 Q250,60 300,125 Q350,190 400,125" fill="none" stroke="rgba(123,159,191,0.3)" stroke-width="1.5"/>
+              <!-- Frequency bars -->
+              <g fill="rgba(123,159,191,0.4)">
+                <rect x="30" y="90" width="6" height="70" rx="3"/>
+                <rect x="50" y="70" width="6" height="110" rx="3"/>
+                <rect x="70" y="95" width="6" height="60" rx="3"/>
+                <rect x="90" y="80" width="6" height="90" rx="3"/>
+                <rect x="110" y="100" width="6" height="50" rx="3"/>
+                <rect x="130" y="75" width="6" height="100" rx="3"/>
+                <rect x="150" y="60" width="6" height="130" rx="3" fill="rgba(111,236,212,0.6)"/>
+                <rect x="170" y="80" width="6" height="90" rx="3"/>
+                <rect x="190" y="95" width="6" height="60" rx="3"/>
+                <rect x="210" y="70" width="6" height="110" rx="3"/>
+                <rect x="230" y="85" width="6" height="80" rx="3"/>
+                <rect x="250" y="100" width="6" height="50" rx="3"/>
+              </g>
+            </svg>
+            <div class="card-art-overlay"></div>
+          </div>
+          <div class="card-body">
+            <div class="card-tags">
+              <span class="tag">Express</span>
+              <span class="tag">Canvas</span>
+              <span class="tag">Node.js</span>
+            </div>
+            <h3 class="card-title">FinTalk API</h3>
+            <p class="card-desc">A RESTful API for financial data analysis and reporting, built with Node.js and Express.</p>
+            <div class="card-footer">
+              <span class="card-year">2026</span>
+              <button class="card-link">
+                View case
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M7 17L17 7M17 7H7M17 7v10"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 5 -->
+        <div class="glass-card" data-depth="1.3" onmousemove="tiltCard(event, this)" onmouseleave="resetCard(this)" onclick="openProject(this)">
+          <div class="card-glow"></div>
+          <div class="card-art">
+            <svg viewBox="0 0 400 250" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+              <defs>
+                <radialGradient id="rg5" cx="40%" cy="70%" r="55%">
+                  <stop offset="0%" stop-color="#6FECD4" stop-opacity="0.2"/>
+                  <stop offset="50%" stop-color="#A8C4DC" stop-opacity="0.15"/>
+                  <stop offset="100%" stop-color="#0B0C10" stop-opacity="0"/>
+                </radialGradient>
+              </defs>
+              <rect width="400" height="250" fill="#141822"/>
+              <rect width="400" height="250" fill="url(#rg5)"/>
+              <!-- Map/topology lines -->
+              <g fill="none" stroke="rgba(111,236,212,0.15)" stroke-width="0.8">
+                <ellipse cx="200" cy="125" rx="160" ry="80"/>
+                <ellipse cx="200" cy="125" rx="130" ry="60"/>
+                <ellipse cx="200" cy="125" rx="100" ry="40"/>
+                <ellipse cx="200" cy="125" rx="70" ry="22"/>
+                <ellipse cx="200" cy="125" rx="40" ry="10"/>
+              </g>
+              <!-- Node graph -->
+              <g>
+                <circle cx="200" cy="125" r="7" fill="rgba(111,236,212,0.8)"/>
+                <circle cx="120" cy="80" r="4" fill="rgba(168,196,220,0.6)"/>
+                <circle cx="300" cy="90" r="5" fill="rgba(168,196,220,0.5)"/>
+                <circle cx="150" cy="170" r="4" fill="rgba(168,196,220,0.4)"/>
+                <circle cx="290" cy="165" r="4" fill="rgba(168,196,220,0.5)"/>
+                <circle cx="80" cy="140" r="3" fill="rgba(168,196,220,0.35)"/>
+                <circle cx="340" cy="130" r="3" fill="rgba(168,196,220,0.35)"/>
+                <line x1="200" y1="125" x2="120" y2="80" stroke="rgba(111,236,212,0.3)" stroke-width="0.8"/>
+                <line x1="200" y1="125" x2="300" y2="90" stroke="rgba(111,236,212,0.3)" stroke-width="0.8"/>
+                <line x1="200" y1="125" x2="150" y2="170" stroke="rgba(111,236,212,0.25)" stroke-width="0.8"/>
+                <line x1="200" y1="125" x2="290" y2="165" stroke="rgba(111,236,212,0.25)" stroke-width="0.8"/>
+                <line x1="120" y1="80" x2="80" y2="140" stroke="rgba(168,196,220,0.15)" stroke-width="0.6"/>
+                <line x1="300" y1="90" x2="340" y2="130" stroke="rgba(168,196,220,0.15)" stroke-width="0.6"/>
+              </g>
+            </svg>
+            <div class="card-art-overlay"></div>
+          </div>
+          <div class="card-body">
+            <div class="card-tags">
+              <span class="tag">Next.js</span>
+              <span class="tag">GraphQL</span>
+              <span class="tag">Mapbox</span>
+            </div>
+            <h3 class="card-title">VXL K - INDUSTRIAL CREATIVE STUDIO</h3>
+            <p class="card-desc">A cutting-edge creative studio specializing in industrial design and digital experiences.</p>
+            <div class="card-footer">
+              <span class="card-year">2026</span>
+              <button class="card-link">
+                View case
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M7 17L17 7M17 7H7M17 7v10"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 6 -->
+        <div class="glass-card" data-depth="0.9" onmousemove="tiltCard(event, this)" onmouseleave="resetCard(this)" onclick="openProject(this)">
+          <div class="card-glow"></div>
+          <div class="card-art">
+            <svg viewBox="0 0 400 250" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+              <defs>
+                <radialGradient id="rg6" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#E8D5C0" stop-opacity="0.35"/>
+                  <stop offset="70%" stop-color="#7B9FBF" stop-opacity="0.15"/>
+                  <stop offset="100%" stop-color="#0B0C10" stop-opacity="0"/>
+                </radialGradient>
+              </defs>
+              <rect width="400" height="250" fill="#141822"/>
+              <rect width="400" height="250" fill="url(#rg6)"/>
+              <!-- Particle field -->
+              <g fill="rgba(232,213,192,0.5)">
+                <circle cx="60" cy="50" r="2"/><circle cx="120" cy="80" r="1.5"/>
+                <circle cx="200" cy="40" r="2.5"/><circle cx="280" cy="70" r="1.5"/>
+                <circle cx="350" cy="45" r="2"/><circle cx="100" cy="130" r="1.5"/>
+                <circle cx="180" cy="160" r="2"/><circle cx="260" cy="140" r="1.5"/>
+                <circle cx="320" cy="160" r="2.5"/><circle cx="80" cy="195" r="1.5"/>
+                <circle cx="160" cy="210" r="2"/><circle cx="240" cy="200" r="1.5"/>
+                <circle cx="370" cy="205" r="2"/><circle cx="50" cy="165" r="1.5"/>
+              </g>
+              <!-- Connection lines -->
+              <g stroke="rgba(232,213,192,0.15)" stroke-width="0.6" fill="none">
+                <line x1="60" y1="50" x2="120" y2="80"/>
+                <line x1="120" y1="80" x2="200" y2="40"/>
+                <line x1="200" y1="40" x2="280" y2="70"/>
+                <line x1="280" y1="70" x2="350" y2="45"/>
+                <line x1="120" y1="80" x2="100" y2="130"/>
+                <line x1="200" y1="40" x2="180" y2="160"/>
+                <line x1="280" y1="70" x2="260" y2="140"/>
+                <line x1="100" y1="130" x2="180" y2="160"/>
+                <line x1="180" y1="160" x2="260" y2="140"/>
+                <line x1="260" y1="140" x2="320" y2="160"/>
+              </g>
+              <!-- Central orb -->
+              <circle cx="200" cy="120" r="35" fill="none" stroke="rgba(232,213,192,0.2)" stroke-width="1" stroke-dasharray="5 5"/>
+              <circle cx="200" cy="120" r="20" fill="rgba(232,213,192,0.08)"/>
+              <circle cx="200" cy="120" r="8" fill="rgba(232,213,192,0.3)"/>
+            </svg>
+            <div class="card-art-overlay"></div>
+          </div>
+          <div class="card-body">
+            <div class="card-tags">
+              <span class="tag">AI/ML</span>
+              <span class="tag">Python</span>
+              <span class="tag">WebAssembly</span>
+            </div>
+            <h3 class="card-title">Sundaram Finance Company Analysis</h3>
+            <p class="card-desc">Comprehensive financial analysis and reporting for Sundaram Finance Company.</p>
+            <div class="card-footer">
+              <span class="card-year">2026</span>
+              <button class="card-link">
+                View case
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M7 17L17 7M17 7H7M17 7v10"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ─── ABOUT ─── -->
+    <div class="view" id="about-view">
+      <div class="about-layout">
+        <div class="about-left">
+          <div class="about-eyebrow">The person behind the work</div>
+          <h2 class="about-name">Anirudh <span>Prasad</span></h2>
+          <p class="about-bio">I'm a data scientist and a creative developer based in chennai specializing in the space where data science meets economics and design. I have developed various websites with varied purposes. for 3 years I have been working on myself to prove that developing webapps and various projects requires just a smart way to use agents and not just coding knowledge.</p>
+          <p class="about-bio">Currently open to senior roles, collaborations, and commissions that push the frontier of what interfaces can be.</p>
+          <div class="skills-list">
+            <span class="skill-pill">Python</span>
+            <span class="skill-pill">HTML</span>
+            <span class="skill-pill">React / Next.js</span>
+            <span class="skill-pill">Strata</span>
+            <span class="skill-pill">SQL</span>
+            <span class="skill-pill">Canva</span>
+            <span class="skill-pill">UI/UX Design</span>
+            <span class="skill-pill">Creative Direction</span>
+            <span class="skill-pill">Motion Design</span>
+          </div>
+          <button class="btn-primary" onclick="navigate('contact')">Work Together →</button>
+        </div>
+        <div class="about-right">
+          <div class="about-avatar">
+            <div class="avatar-grid"></div>
+            <img src="IMG-20260614-WA0016.jpg" alt="Anirudh Prasad" class="avatar-img">
+          </div>
+          <div class="about-stats">
+            <div class="stat">
+              <div class="stat-num">2<span>+</span></div>
+              <div class="stat-label">Years exp</div>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat">
+              <div class="stat-num">10</div>
+              <div class="stat-label">Projects</div>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat">
+              <div class="stat-num">5<span>k</span></div>
+              <div class="stat-label">GitHub stars</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── CONTACT ─── -->
+    <div class="view" id="contact-view">
+      <div class="contact-label">Let's build something</div>
+      <h2 class="contact-title">Get in Touch</h2>
+      <p class="contact-sub">Whether you have a project in mind, want to collaborate, or just want to talk about creative development — my inbox is always open.</p>
+      <div class="contact-links">
+        <a href="https://github.com/anirudh007-arch" target="_blank" class="contact-pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>
+          GitHub
+        </a>
+        <a href="https://www.linkedin.com/in/anirudh-v-prasad-4a3613309" target="_blank" class="contact-pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg>
+          LinkedIn
+        </a>
+        <a href="#" class="contact-pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"/></svg>
+          Twitter / X
+        </a>
+      </div>
+      <a href="mailto:anirudhv16742@gmail.com" class="contact-email">anirudhv16742@gmail.com</a>
+    </div>
+
+  </div>
+</div>
+
+<!-- Scroll hint -->
+<div class="scroll-hint" id="scrollHint">
+  <div class="scroll-line"></div>
+  <span>Explore</span>
+</div>
+
+<script>
+/* ══════════════════════════════════════════
+   CURSOR
+══════════════════════════════════════════ */
+const cursor = document.getElementById('cursor');
+const cursorRing = document.getElementById('cursor-ring');
+let mx = 0, my = 0, rx = 0, ry = 0;
+
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cursor.style.left = mx + 'px';
+  cursor.style.top = my + 'px';
+  document.getElementById('coord-xy').textContent =
+    String(Math.round(e.clientX / window.innerWidth * 999)).padStart(3,'0') + ' / ' +
+    String(Math.round(e.clientY / window.innerHeight * 999)).padStart(3,'0');
+});
+
+(function trackRing() {
+  rx += (mx - rx) * 0.12;
+  ry += (my - ry) * 0.12;
+  cursorRing.style.left = rx + 'px';
+  cursorRing.style.top = ry + 'px';
+  requestAnimationFrame(trackRing);
+})();
+
+document.querySelectorAll('button, .glass-card, .contact-pill, .contact-email, .nav-logo, .nav-dot').forEach(el => {
+  el.addEventListener('mouseenter', () => document.body.classList.add('hovering'));
+  el.addEventListener('mouseleave', () => document.body.classList.remove('hovering'));
+});
+
+/* ══════════════════════════════════════════
+   CANVAS BACKGROUND — Volumetric particle field
+══════════════════════════════════════════ */
+const canvas = document.getElementById('bg-canvas');
+const ctx = canvas.getContext('2d');
+let W, H, particles = [], lines = [];
+
+function resizeCanvas() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', () => { resizeCanvas(); initParticles(); });
+
+class Particle {
+  constructor() { this.reset(); }
+  reset() {
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    this.z = Math.random() * 2 + 0.2; // depth layer
+    this.vx = (Math.random() - 0.5) * 0.18 * this.z;
+    this.vy = (Math.random() - 0.5) * 0.18 * this.z;
+    this.r = Math.random() * 1.8 * this.z + 0.3;
+    this.life = Math.random();
+    this.maxLife = Math.random() * 0.006 + 0.001;
+    // Type: 0=dot, 1=cross-hair, 2=ring
+    this.type = Math.random() < 0.7 ? 0 : Math.random() < 0.5 ? 1 : 2;
+    // Color: teal, clay, or warm
+    const c = Math.random();
+    if (c < 0.4) this.color = `rgba(111,236,212,`;
+    else if (c < 0.75) this.color = `rgba(168,196,220,`;
+    else this.color = `rgba(232,213,192,`;
+    this.alpha = Math.random() * 0.5 + 0.1;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    // Mouse repulsion (gentle)
+    const dx = this.x - mouseWorld.x;
+    const dy = this.y - mouseWorld.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < 120) {
+      const force = (120 - dist) / 120 * 0.3;
+      this.x += (dx / dist) * force;
+      this.y += (dy / dist) * force;
+    }
+    if (this.x < -10) this.x = W + 10;
+    if (this.x > W + 10) this.x = -10;
+    if (this.y < -10) this.y = H + 10;
+    if (this.y > H + 10) this.y = -10;
+  }
+  draw() {
+    const a = this.alpha * (0.6 + 0.4 * Math.sin(Date.now() * 0.001 * this.z));
+    ctx.globalAlpha = a;
+    ctx.fillStyle = this.color + a + ')';
+    ctx.strokeStyle = this.color + a + ')';
+    if (this.type === 0) {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (this.type === 1) {
+      const s = this.r * 3;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(this.x - s, this.y); ctx.lineTo(this.x + s, this.y);
+      ctx.moveTo(this.x, this.y - s); ctx.lineTo(this.x, this.y + s);
+      ctx.stroke();
+    } else {
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r * 2, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+const mouseWorld = { x: -1000, y: -1000 };
+document.addEventListener('mousemove', e => { mouseWorld.x = e.clientX; mouseWorld.y = e.clientY; });
+
+function initParticles() {
+  const count = Math.min(180, Math.floor(W * H / 6000));
+  particles = Array.from({ length: count }, () => new Particle());
+}
+initParticles();
+
+function connectParticles() {
+  const maxDist = 120;
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d < maxDist) {
+        const a = (1 - d / maxDist) * 0.08;
+        ctx.globalAlpha = a;
+        ctx.strokeStyle = `rgba(111,236,212,${a})`;
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+}
+
+// Noise grid (subtle background texture)
+let noiseT = 0;
+function drawNoiseGrid() {
+  const step = 60;
+  ctx.globalAlpha = 0.015;
+  ctx.strokeStyle = 'rgba(168,196,220,1)';
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x < W; x += step) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for (let y = 0; y < H; y += step) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawVignette() {
+  const grd = ctx.createRadialGradient(W/2, H/2, H*0.2, W/2, H/2, H*0.85);
+  grd.addColorStop(0, 'rgba(11,12,16,0)');
+  grd.addColorStop(1, 'rgba(11,12,16,0.65)');
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function renderFrame() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0B0C10';
+  ctx.fillRect(0, 0, W, H);
+  drawNoiseGrid();
+  connectParticles();
+  particles.forEach(p => { p.update(); p.draw(); });
+  drawVignette();
+  requestAnimationFrame(renderFrame);
+}
+renderFrame();
+
+/* ══════════════════════════════════════════
+   3D CARD TILT
+══════════════════════════════════════════ */
+function tiltCard(e, card) {
+  const rect = card.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const dx = (e.clientX - cx) / (rect.width / 2);
+  const dy = (e.clientY - cy) / (rect.height / 2);
+  const depth = parseFloat(card.dataset.depth || 1);
+  const maxTilt = 12 * depth;
+
+  const rotY = dx * maxTilt;
+  const rotX = -dy * maxTilt * 0.7;
+
+  card.style.transform = `perspective(800px) rotateX(${rotX}deg) rotateY(${rotY}deg) translateZ(8px)`;
+
+  // Move glow to cursor position
+  const glow = card.querySelector('.card-glow');
+  if (glow) {
+    glow.style.left = (e.clientX - rect.left) + 'px';
+    glow.style.top = (e.clientY - rect.top) + 'px';
+  }
+}
+
+function resetCard(card) {
+  card.style.transform = 'perspective(800px) rotateX(0deg) rotateY(0deg) translateZ(0px)';
+  card.style.transition = 'transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.4s, box-shadow 0.4s';
+  setTimeout(() => { card.style.transition = ''; }, 600);
+}
+
+/* ══════════════════════════════════════════
+   NAVIGATION & VIEW TRANSITIONS
+══════════════════════════════════════════ */
+let currentView = 'hero';
+const views = ['hero', 'projects', 'about', 'contact'];
+const overlay = document.getElementById('transition-overlay');
+
+function navigate(target) {
+  if (target === currentView) return;
+
+  overlay.classList.add('active');
+
+  setTimeout(() => {
+    // Hide current
+    const prev = document.getElementById(currentView + '-view');
+    if (prev) { prev.classList.remove('active'); }
+
+    // Scene 3D move (camera-like)
+    const inner = document.getElementById('scene-inner');
+    const fromIdx = views.indexOf(currentView);
+    const toIdx = views.indexOf(target);
+    const diff = toIdx - fromIdx;
+
+    // Subtle translateZ shift for camera feel
+    inner.style.transform = `translateZ(${diff * -60}px)`;
+    setTimeout(() => {
+      inner.style.transform = 'translateZ(0)';
+    }, 800);
+
+    currentView = target;
+
+    // Show new
+    const next = document.getElementById(target + '-view');
+    if (next) { next.classList.add('active'); }
+
+    // Update nav buttons
+    document.querySelectorAll('.nav-links button').forEach(b => b.classList.remove('active'));
+    const navBtn = document.getElementById('nav-' + target);
+    if (navBtn) navBtn.classList.add('active');
+
+    // Update dots
+    document.querySelectorAll('.nav-dot').forEach((d, i) => {
+      d.classList.toggle('active', views[i] === target);
+    });
+
+    // Scroll hint
+    document.getElementById('scrollHint').classList.toggle('hide', target !== 'hero');
+
+    overlay.classList.remove('active');
+  }, 350);
+}
+
+function openProject(card) {
+  const title = card.querySelector('.card-title').textContent;
+  // Subtle feedback — scale and flash
+  card.style.transition = 'transform 0.2s ease, box-shadow 0.2s, border-color 0.2s';
+  card.style.transform = 'perspective(800px) scale(0.97)';
+  card.style.borderColor = 'var(--glass-border-active)';
+  setTimeout(() => {
+    card.style.transform = '';
+    card.style.borderColor = '';
+    setTimeout(() => { card.style.transition = ''; }, 400);
+  }, 180);
+}
+
+/* ══════════════════════════════════════════
+   KEYBOARD NAVIGATION
+══════════════════════════════════════════ */
+document.addEventListener('keydown', e => {
+  const idx = views.indexOf(currentView);
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') navigate(views[Math.min(idx + 1, views.length - 1)]);
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') navigate(views[Math.max(idx - 1, 0)]);
+});
+
+/* ══════════════════════════════════════════
+   SCROLL BETWEEN VIEWS (wheel)
+══════════════════════════════════════════ */
+let wheelLock = false;
+document.addEventListener('wheel', e => {
+  if (wheelLock) return;
+  // Only intercept on non-scrollable views
+  const scrollableViews = ['projects', 'about'];
+  if (scrollableViews.includes(currentView)) {
+    const view = document.getElementById(currentView + '-view');
+    const atTop = view.scrollTop <= 0;
+    const atBottom = view.scrollTop + view.clientHeight >= view.scrollHeight - 4;
+    if (e.deltaY > 0 && !atBottom) return;
+    if (e.deltaY < 0 && !atTop) return;
+  }
+  wheelLock = true;
+  setTimeout(() => { wheelLock = false; }, 1000);
+
+  const idx = views.indexOf(currentView);
+  if (e.deltaY > 0) navigate(views[Math.min(idx + 1, views.length - 1)]);
+  else navigate(views[Math.max(idx - 1, 0)]);
+}, { passive: true });
+
+/* ══════════════════════════════════════════
+   AMBIENT PARALLAX (global mouse → scene subtle shift)
+══════════════════════════════════════════ */
+let pmx = 0.5, pmy = 0.5;
+document.addEventListener('mousemove', e => {
+  pmx += ((e.clientX / window.innerWidth) - pmx) * 0.04;
+  pmy += ((e.clientY / window.innerHeight) - pmy) * 0.04;
+});
+
+(function ambientParallax() {
+  const scene = document.getElementById('scene-inner');
+  const rx = (pmx - 0.5) * 3;
+  const ry = (pmy - 0.5) * 3;
+  if (currentView === 'hero') {
+    scene.style.transform = `rotateY(${rx}deg) rotateX(${-ry}deg)`;
+  }
+  requestAnimationFrame(ambientParallax);
+})();
+
+/* ══════════════════════════════════════════
+   TOUCH SUPPORT
+══════════════════════════════════════════ */
+let touchStartY = 0;
+document.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
+document.addEventListener('touchend', e => {
+  const dy = touchStartY - e.changedTouches[0].clientY;
+  if (Math.abs(dy) < 40) return;
+  const idx = views.indexOf(currentView);
+  if (dy > 0) navigate(views[Math.min(idx + 1, views.length - 1)]);
+  else navigate(views[Math.max(idx - 1, 0)]);
+}, { passive: true });
+
+// Hide cursor on touch devices
+window.addEventListener('touchstart', () => {
+  cursor.style.display = 'none';
+  cursorRing.style.display = 'none';
+  document.body.style.cursor = 'auto';
+}, { once: true });
+</script>
+</body>
+</html>
